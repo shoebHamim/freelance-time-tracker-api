@@ -45,7 +45,7 @@ class TimeLogController extends Controller
         if ($request->filled('end_time')) {
             $startTime = Carbon::parse($request->start_time);
             $endTime = Carbon::parse($request->end_time);
-            $data['hours'] = $endTime->diffInHours($startTime, true); 
+            $data['hours'] = $endTime->diffInHours($startTime, true);
         }
 
         $timeLog = TimeLog::create($data);
@@ -159,9 +159,8 @@ class TimeLogController extends Controller
         ]);
     }
 
-    public function getTimeLogsByDay(Request $request)
+    public function getTimeLogsByDay(Request $request,$date)
     {
-        $date = $request->input('date', now()->toDateString());
         $timeLogs = TimeLog::whereHas('project.client', function ($query) use ($request) {
             $query->where('user_id', $request->user()->id);
         })->whereDate('start_time', $date)->get();
@@ -172,10 +171,10 @@ class TimeLogController extends Controller
         ]);
     }
 
-    public function getTimeLogsByWeek(Request $request)
+    public function getTimeLogsByWeek(Request $request, $date)
     {
-        $startOfWeek = $request->input('start_of_week', now()->startOfWeek()->toDateString());
-        $endOfWeek = $request->input('end_of_week', now()->endOfWeek()->toDateString());
+        $startOfWeek = Carbon::parse($date)->startOfDay();
+        $endOfWeek = Carbon::parse($date)->addDays(6)->endOfDay();
 
         $timeLogs = TimeLog::whereHas('project.client', function ($query) use ($request) {
             $query->where('user_id', $request->user()->id);

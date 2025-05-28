@@ -81,3 +81,8 @@ The database consists of the following main tables:
 -   `timestamps`
 
 
+## API Endpoint Testing(Potman)
+- Download the `Freelance Time Tracker API.postman_collection.json` file
+- import it to Postman
+- Change the variables accordingly 
+- Test !

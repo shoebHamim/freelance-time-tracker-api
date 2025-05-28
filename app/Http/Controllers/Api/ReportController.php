@@ -25,9 +25,8 @@ class ReportController extends Controller
         ]);
     }
 
-    public function getTotalHoursByDay(Request $request)
+    public function getTotalHoursByDay(Request $request, $date)
     {
-        $date = $request->input('date', now()->toDateString());
         $timeLogs = TimeLog::whereHas('project.client', function ($query) use ($request) {
             $query->where('user_id', $request->user()->id);
         })->whereDate('start_time', $date)->sum('hours');

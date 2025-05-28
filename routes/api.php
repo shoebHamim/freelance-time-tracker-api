@@ -27,12 +27,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Time log routes
     Route::apiResource('time-logs', TimeLogController::class);
     Route::post('/time-logs/start', [TimeLogController::class, 'startTimeLog']);
+    Route::get('/time-logs/day/{date}', [TimeLogController::class, 'getTimeLogsByDay']);
+    Route::get('/time-logs/week/{date}', [TimeLogController::class, 'getTimeLogsByWeek']);
     Route::post('/time-logs/{timeLog}/end', [TimeLogController::class, 'endTimeLog']);
-    Route::get('/time-logs/day', [TimeLogController::class, 'getTimeLogsByDay']);
-    Route::get('/time-logs/week', [TimeLogController::class, 'getTimeLogsByWeek']);
     // Report routes
     Route::get('/report/project', [ReportController::class, 'getTotalHoursByProject']);
-    Route::get('/report/day', [ReportController::class, 'getTotalHoursByDay']);
     Route::get('/report/client', [ReportController::class, 'getTotalHoursByClient']);
     Route::get('/report', [ReportController::class, 'generateReport']);
+    Route::get('/report/day/{date}', [ReportController::class, 'getTotalHoursByDay']);
 });
