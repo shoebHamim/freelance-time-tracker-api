@@ -8,26 +8,25 @@ This is a Laravel API for tracking time spent on freelance projects.
     ```bash
     git clone https://github.com/shoebHamim/freelance-time-tracker-api.git
     ```
-2.  **Install dependencies:**
+2.  **Go to the cloned directory:**
+    ```bash
+    cd freelance-time-tracker-api
+    ```
+3.  **Install dependencies:**
     ```bash
     composer install
     ```
-3.  **Copy the environment file:**
+4.  **Copy the environment file:**
     ```bash
     cp .env.example .env
     ```
-4.  **Generate an application key:**
+5.  **Generate an application key:**
     ```bash
     php artisan key:generate
     ```
-5.  **Configure your database:**
-    Open the `.env` file and update the database credentials:
-    ```env
-    DB_CONNECTION=sqlite
-    ```
 6.  **Run database migrations:**
     ```bash
-    php artisan migrate
+    php artisan migrate:fresh
     ```
 7.  **Seed the database :**
     If you want to populate the database with some sample data, run:
