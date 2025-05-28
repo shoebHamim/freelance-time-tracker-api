@@ -6,8 +6,7 @@ This is a Laravel API for tracking time spent on freelance projects.
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/shoebHamim/freelance-time-tracker-api
-    cd freelance-time-tracker-api
+    git clone https://github.com/shoebHamim/freelance-time-tracker-api.git
     ```
 2.  **Install dependencies:**
     ```bash
