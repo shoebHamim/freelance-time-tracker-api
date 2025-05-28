@@ -35,6 +35,10 @@ This is a Laravel API for tracking time spent on freelance projects.
     ```
 8.  **Start the development server:**
     ```bash
+    php -S localhost:8000 -t public
+    ```
+    or
+    ```bash
     php artisan serve
     ```
     The API will be available at `http://127.0.0.1:8000`.
