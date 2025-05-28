@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
@@ -18,7 +19,10 @@ class ReportController extends Controller
             $query->where('user_id', $request->user()->id);
         })->where('project_id', $projectId)->sum('hours');
 
-        return response()->json(['total_hours' => $timeLogs]);
+        return response()->json([
+            'success' => true,
+            'data' => ['total_hours' => $timeLogs]
+        ]);
     }
 
     public function getTotalHoursByDay(Request $request)
@@ -28,7 +32,10 @@ class ReportController extends Controller
             $query->where('user_id', $request->user()->id);
         })->whereDate('start_time', $date)->sum('hours');
 
-        return response()->json(['total_hours' => $timeLogs]);
+        return response()->json([
+            'success' => true,
+            'data' => ['total_hours' => $timeLogs]
+        ]);
     }
 
     public function getTotalHoursByClient(Request $request)
@@ -41,7 +48,10 @@ class ReportController extends Controller
             $query->where('user_id', $request->user()->id)->where('id', $clientId);
         })->whereBetween('start_time', [$from, $to])->sum('hours');
 
-        return response()->json(['total_hours' => $timeLogs]);
+        return response()->json([
+            'success' => true,
+            'data' => ['total_hours' => $timeLogs]
+        ]);
     }
 
     public function generateReport(Request $request)
@@ -50,11 +60,13 @@ class ReportController extends Controller
             'client_id' => 'required|exists:clients,id',
             'from' => 'required|date',
             'to' => 'required|date|after_or_equal:from',
+            'format' => 'in:json,pdf',
         ]);
 
         $clientId = $request->input('client_id');
         $from = $request->input('from');
         $to = $request->input('to');
+        $format = $request->input('format', 'json');
 
         $client = Client::findOrFail($clientId);
         if ($client->user_id !== $request->user()->id) {
@@ -64,18 +76,30 @@ class ReportController extends Controller
             ], 403);
         }
 
-        $timeLogs = TimeLog::whereHas('project', function ($query) use ($clientId) {
-            $query->where('client_id', $clientId);
+        $reportData = $this->getReportData($client, $from, $to);
+
+        if ($format === 'pdf') {
+            return $this->generatePdfReport($reportData);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $reportData
+        ]);
+    }
+
+    protected function getReportData(Client $client, string $from, string $to): array
+    {
+        $timeLogs = TimeLog::whereHas('project', function ($query) use ($client) {
+            $query->where('client_id', $client->id);
         })->whereBetween('start_time', [$from . ' 00:00:00', $to . ' 23:59:59'])
             ->with(['project' => function ($query) {
                 $query->select('id', 'title', 'client_id');
             }])
             ->get();
 
-
         $totalHours = $timeLogs->sum('hours') ?? 0;
         $totalLogs = $timeLogs->count();
-
 
         $projectSummary = $timeLogs->groupBy('project_id')->map(function ($logs, $projectId) {
             $project = $logs->first()->project;
@@ -96,7 +120,6 @@ class ReportController extends Controller
             ];
         })->values();
 
-
         $dailySummary = $timeLogs->groupBy(function ($log) {
             return Carbon::parse($log->start_time)->toDateString();
         })->map(function ($logs, $date) {
@@ -107,36 +130,44 @@ class ReportController extends Controller
             ];
         })->values();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'client' => [
-                    'id' => $client->id,
-                    'name' => $client->name,
-                    'email' => $client->email,
-                ],
-                'period' => [
-                    'from' => $from,
-                    'to' => $to,
-                ],
-                'summary' => [
-                    'total_hours' => $totalHours,
-                    'total_logs' => $totalLogs,
-                    'average_hours_per_day' => $totalLogs > 0 ? round($totalHours / max(1, Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1), 2) : 0,
-                ],
-                'project_breakdown' => $projectSummary,
-                'daily_breakdown' => $dailySummary,
-                'detailed_logs' => $timeLogs->map(function ($log) {
-                    return [
-                        'id' => $log->id,
-                        'project_title' => $log->project->title,
-                        'start_time' => $log->start_time,
-                        'end_time' => $log->end_time,
-                        'hours' => $log->hours,
-                        'description' => $log->description,
-                    ];
-                })
-            ]
-        ]);
+        return [
+            'client' => [
+                'id' => $client->id,
+                'name' => $client->name,
+                'email' => $client->email,
+            ],
+            'period' => [
+                'from' => $from,
+                'to' => $to,
+            ],
+            'summary' => [
+                'total_hours' => $totalHours,
+                'total_logs' => $totalLogs,
+                'average_hours_per_day' => $totalLogs > 0 ? round($totalHours / max(1, Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1), 2) : 0,
+            ],
+            'project_breakdown' => $projectSummary,
+            'daily_breakdown' => $dailySummary,
+            'detailed_logs' => $timeLogs->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'project_title' => $log->project->title,
+                    'start_time' => $log->start_time,
+                    'end_time' => $log->end_time,
+                    'hours' => $log->hours,
+                    'description' => $log->description,
+                ];
+            })
+        ];
+    }
+
+    protected function generatePdfReport(array $data)
+    {
+        $pdf = Pdf::loadView('reports.pdf', ['data' => $data]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        $filename = 'time-report-' . $data['client']['name'] . '-' . $data['period']['from'] . '-to-' . $data['period']['to'] . '.pdf';
+
+        return $pdf->download($filename);
     }
 }
